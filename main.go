@@ -8,7 +8,11 @@ import (
 )
 
 func main() {
-	gitlabToken := os.Getenv("GITLAB_TOKEN")
+	gitlabToken, found := os.LookupEnv("GITLAB_TOKEN")
+	if found != true {
+		log.Fatal("GITLAB_TOKEN not found")
+	}
+
 	git, err := gitlab.NewClient(gitlabToken)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
