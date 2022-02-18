@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/shurcooL/graphql"
 	"golang.org/x/oauth2"
 )
@@ -70,15 +71,22 @@ type cliOutput struct{}
 type slackOutput struct{}
 
 func (out *cliOutput) write(mrs *mergeRequestsForReview) {
-	fmt.Printf("MRs with fewer than 2 approvals (%v)\n========================================\n", len(mrs.unapprovedMRs))
+	header := color.New(color.FgBlue).Add(color.Underline)
+	title := color.New(color.FgRed)
+	url := color.New(color.FgHiBlack)
 
+	header.Printf("MRs with fewer than 2 approvals (%v)\n", len(mrs.unapprovedMRs))
 	for i, mr := range mrs.unapprovedMRs {
-		fmt.Printf("%v. %v (%v)\n", i+1, mr.title, mr.url)
+		fmt.Printf("%d. ", i+1)
+		title.Printf("%s ", mr.title)
+		url.Printf("(%s)\n", mr.url)
 	}
 	fmt.Println()
-	fmt.Printf("MRs with unresolved comments (%v)\n==================================\n", len(mrs.unresolvedMRs))
+	header.Printf("MRs with unresolved comments (%v)\n", len(mrs.unresolvedMRs))
 	for i, mr := range mrs.unresolvedMRs {
-		fmt.Printf("%v. %v (%v)\n", i+1, mr.title, mr.url)
+		fmt.Printf("%d. ", i+1)
+		title.Printf("%s ", mr.title)
+		url.Printf("(%s)\n", mr.url)
 	}
 }
 
