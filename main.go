@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"os"
 
-	"github.com/xanzy/go-gitlab"
+	"github.com/shurcooL/graphql"
+	"golang.org/x/oauth2"
 )
 
 func main() {
@@ -13,30 +16,76 @@ func main() {
 		log.Fatal("GITLAB_TOKEN not found")
 	}
 
-	git, err := gitlab.NewClient(gitlabToken)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+	var query struct {
+		Project struct {
+			MergeRequests struct {
+				Nodes []struct {
+					Iid        string
+					Title      string
+					ApprovedBy struct {
+						Nodes []struct {
+							Username string
+						}
+					}
+					Discussions struct {
+						Nodes []struct {
+							Resolved bool
+							Notes    struct {
+								Nodes []struct {
+									System bool
+									Body   string
+									Author struct {
+										Username string
+									}
+								}
+							}
+						}
+					}
+				}
+			} `graphql:"mergeRequests(state: opened, draft: false)"`
+		} `graphql:"project(fullPath: \"sourceability/pim\")"`
 	}
 
-	state := "opened"
-	wip := "no"
-	notLabels := gitlab.Labels{"dependencies"}
-	orderBy := "updated_at"
-	sort := "asc"
-
-	opts := &gitlab.ListProjectMergeRequestsOptions{}
-	opts.State = &state
-	opts.WIP = &wip
-	opts.NotLabels = &notLabels
-	opts.Sort = &sort
-	opts.OrderBy = &orderBy
-
-	mrs, resp, err := git.MergeRequests.ListProjectMergeRequests(4835773, opts)
+	src := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: gitlabToken},
+	)
+	httpClient := oauth2.NewClient(context.Background(), src)
+	client := graphql.NewClient("https://gitlab.com/api/graphql", httpClient)
+	err := client.Query(context.Background(), &query, nil)
 	if err != nil {
-		log.Fatalf("Failed to list MRs: %v", err)
+		log.Fatalf("Failed to run query: %v", err)
 	}
-	log.Printf("Resp: %v", resp.TotalItems)
-	for _, mr := range mrs {
-		log.Printf("MR: %v", mr.Title)
+
+	var unapprovedMrs []string
+	var unresolvedMrs = make(map[string]string)
+
+	for _, mr := range query.Project.MergeRequests.Nodes {
+		if len(mr.ApprovedBy.Nodes) == 0 {
+			unapprovedMrs = append(unapprovedMrs, mr.Title)
+		}
+
+		for _, discussion := range mr.Discussions.Nodes {
+			if discussion.Resolved == true {
+				continue
+			}
+
+			for _, note := range discussion.Notes.Nodes {
+				if note.System == true {
+					continue
+				}
+
+				unresolvedMrs[mr.Iid] = mr.Title
+			}
+		}
+	}
+
+	fmt.Printf("Unapproved MRs\n===============\n")
+	for _, mr := range unapprovedMrs {
+		fmt.Printf("%v\n", mr)
+	}
+	fmt.Println()
+	fmt.Printf("Unresolved MRs\n===============\n")
+	for _, title := range unresolvedMrs {
+		fmt.Printf("%v\n", title)
 	}
 }
