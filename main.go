@@ -21,11 +21,15 @@ func main() {
 	state := "opened"
 	wip := "no"
 	notLabels := gitlab.Labels{"dependencies"}
+	orderBy := "updated_at"
+	sort := "asc"
 
 	opts := &gitlab.ListProjectMergeRequestsOptions{}
 	opts.State = &state
 	opts.WIP = &wip
 	opts.NotLabels = &notLabels
+	opts.Sort = &sort
+	opts.OrderBy = &orderBy
 
 	mrs, resp, err := git.MergeRequests.ListProjectMergeRequests(4835773, opts)
 	if err != nil {
