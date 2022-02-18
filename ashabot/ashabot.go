@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/fatih/color"
@@ -16,10 +15,15 @@ func CLI(args []string) int {
 	var app appEnv
 	err := app.fromArgs(args)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading application: %v\n", err)
 		return 2
 	}
-	mrs := app.fetchMRsForReview()
-	app.output.write(&mrs)
+	mrs, err := app.fetchMRsForReview()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error fetching MRs: %v\n", err)
+		return 3
+	}
+	app.output.write(mrs)
 
 	return 0
 }
@@ -46,7 +50,7 @@ func (app *appEnv) fromArgs(args []string) error {
 
 	gitlabToken, found := os.LookupEnv("GITLAB_TOKEN")
 	if found != true {
-		log.Fatal("GITLAB_TOKEN not found")
+		return fmt.Errorf("GITLAB_TOKEN not found in environment")
 	}
 	src := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: gitlabToken},

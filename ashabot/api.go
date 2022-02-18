@@ -2,14 +2,13 @@ package ashabot
 
 import (
 	"context"
-	"log"
 )
 
-func (app *appEnv) fetchMRsForReview() mergeRequestsForReview {
+func (app *appEnv) fetchMRsForReview() (*mergeRequestsForReview, error) {
 	query := openNonDraftMergeRequests{}
 	err := app.qc.Query(context.Background(), &query, nil)
 	if err != nil {
-		log.Fatalf("Failed to run query: %v", err)
+		return nil, err
 	}
 
 	unapprovedMrs := make(map[string]mergeRequest)
@@ -36,7 +35,7 @@ func (app *appEnv) fetchMRsForReview() mergeRequestsForReview {
 		}
 	}
 
-	return mergeRequestsForReview{unapprovedMRs: values(unapprovedMrs), unresolvedMRs: values(unresolvedMrs)}
+	return &mergeRequestsForReview{unapprovedMRs: values(unapprovedMrs), unresolvedMRs: values(unresolvedMrs)}, nil
 }
 
 func values(m map[string]mergeRequest) []mergeRequest {
