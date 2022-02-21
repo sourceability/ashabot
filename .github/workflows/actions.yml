@@ -18,8 +18,3 @@ jobs:
       with:
         go-version: ${{ matrix.go }}
     - run: "make pre-commit"
-    - uses: dominikh/staticcheck-action@v1.1.0
-      with:
-        version: "2021.1.1"
-        install-go: false
-        cache-key: ${{ matrix.go }}
