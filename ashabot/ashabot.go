@@ -49,7 +49,7 @@ func (app *appEnv) fromArgs(args []string) error {
 	}
 
 	gitlabToken, found := os.LookupEnv("GITLAB_TOKEN")
-	if found != true {
+	if !found {
 		return fmt.Errorf("GITLAB_TOKEN not found in environment")
 	}
 	src := oauth2.StaticTokenSource(

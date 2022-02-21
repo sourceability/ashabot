@@ -21,12 +21,12 @@ func (app *appEnv) fetchMRsForReview() (*mergeRequestsForReview, error) {
 		}
 
 		for _, discussion := range mr.Discussions.Nodes {
-			if discussion.Resolved == true {
+			if discussion.Resolved {
 				continue
 			}
 
 			for _, note := range discussion.Notes.Nodes {
-				if note.System == true {
+				if note.System {
 					continue
 				}
 				mr := mergeRequest{iid: mr.Iid, title: mr.Title, url: mr.WebUrl}
@@ -52,10 +52,9 @@ type mergeRequestsForReview struct {
 }
 
 type mergeRequest struct {
-	iid        string
-	title      string
-	approvedBy string
-	url        string
+	iid   string
+	title string
+	url   string
 }
 
 type openNonDraftMergeRequests struct {
