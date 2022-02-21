@@ -1,4 +1,4 @@
-pre-commit: staticcheck vet
+pre-commit: staticcheck vet fmt
 
 staticcheck: $(shell go env GOPATH)/bin/staticcheck
 	staticcheck ./...
@@ -8,3 +8,6 @@ $(shell go env GOPATH)/bin/staticcheck:
 
 vet:
 	go vet ./...
+
+fmt:
+	go fmt ./...
