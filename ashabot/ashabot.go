@@ -4,16 +4,24 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/joho/godotenv"
 	"github.com/shurcooL/graphql"
 	"golang.org/x/oauth2"
 )
 
 func CLI(args []string) int {
 	var app appEnv
-	err := app.fromArgs(args)
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	err = app.fromArgs(args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading application: %v\n", err)
 		return 2
