@@ -10,6 +10,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/joho/godotenv"
 	"github.com/shurcooL/graphql"
+	"github.com/slack-go/slack"
+	"github.com/slack-go/slack/socketmode"
 	"golang.org/x/oauth2"
 )
 
@@ -50,8 +52,16 @@ func (app *appEnv) fromArgs(args []string) error {
 		fl.Usage()
 		return flag.ErrHelp
 	}
+
 	if *outputDesination == "slack" {
-		app.output = &slackOutput{}
+		slackTokens, err := getSlackTokens()
+		if err != nil {
+			return fmt.Errorf("error validating slack tokens: %v", err)
+		}
+		app.output = &slackOutput{tokens: slackTokens}
+		if app.debug {
+			app.output.debug(true)
+		}
 	} else {
 		app.output = &cliOutput{}
 	}
@@ -71,6 +81,8 @@ func (app *appEnv) fromArgs(args []string) error {
 
 type outputClient interface {
 	write(mrs *mergeRequestsForReview)
+	isDebug() bool
+	debug(debug bool)
 }
 
 type appEnv struct {
@@ -80,7 +92,22 @@ type appEnv struct {
 }
 
 type cliOutput struct{}
-type slackOutput struct{}
+
+func (out *cliOutput) isDebug() bool    { return false }
+func (out *cliOutput) debug(debug bool) {}
+
+type slackTokens struct {
+	appToken string
+	botToken string
+}
+
+type slackOutput struct {
+	tokens     slackTokens
+	slackDebug bool
+}
+
+func (out *slackOutput) isDebug() bool    { return out.slackDebug }
+func (out *slackOutput) debug(debug bool) { out.slackDebug = debug }
 
 func (out *cliOutput) write(mrs *mergeRequestsForReview) {
 	header := color.New(color.FgBlue).Add(color.Underline)
@@ -103,5 +130,12 @@ func (out *cliOutput) write(mrs *mergeRequestsForReview) {
 }
 
 func (out *slackOutput) write(mrs *mergeRequestsForReview) {
-	fmt.Printf("Send to slack: %v", mrs)
+	api := slack.New(
+		out.tokens.botToken,
+		slack.OptionDebug(out.isDebug()),
+		slack.OptionLog(log.New(os.Stdout, "api: ", log.Lshortfile|log.LstdFlags)),
+		slack.OptionAppLevelToken(out.tokens.appToken))
+	client := socketmode.New(api, socketmode.OptionDebug(out.isDebug()), socketmode.OptionLog(log.New(os.Stdout, "client: ", log.Lshortfile|log.LstdFlags)))
+
+	go handleSlackEvents(client)
 }
